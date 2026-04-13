@@ -1,15 +1,15 @@
 package com.remoteclassroom.backend.service;
 
-import com.remoteclassroom.backend.model.Quiz;
-import com.remoteclassroom.backend.model.WeakTopic;
-import com.remoteclassroom.backend.repository.QuizRepository;
-import com.remoteclassroom.backend.repository.WeakTopicRepository;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.remoteclassroom.backend.model.Quiz;
+import com.remoteclassroom.backend.model.WeakTopic;
+import com.remoteclassroom.backend.repository.QuizRepository;
+import com.remoteclassroom.backend.repository.WeakTopicRepository;
 
 @Service
 public class AdaptiveQuizService {
@@ -31,7 +31,7 @@ public class AdaptiveQuizService {
         String difficulty = attemptService.getUserDifficultyAdvanced(userId);
 
         List<WeakTopic> weakTopics =
-                weakTopicRepository.findByUserIdOrderByCountDesc(userId);
+                weakTopicRepository.findByQuizAttempt_Student_IdOrderByCountDesc(userId);
 
         String focusTopic = null;
         if (!weakTopics.isEmpty()) {

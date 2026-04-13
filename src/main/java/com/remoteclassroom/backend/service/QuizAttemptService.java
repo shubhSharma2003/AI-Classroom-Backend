@@ -1,6 +1,6 @@
 package com.remoteclassroom.backend.service;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -8,14 +8,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remoteclassroom.backend.dto.QuizAttemptRequest;
 import com.remoteclassroom.backend.dto.QuizAttemptResponse;
 import com.remoteclassroom.backend.model.Quiz;
 import com.remoteclassroom.backend.model.QuizAttempt;
+import com.remoteclassroom.backend.model.User;
 import com.remoteclassroom.backend.model.WeakTopic;
 import com.remoteclassroom.backend.repository.QuizAttemptRepository;
 import com.remoteclassroom.backend.repository.QuizRepository;
+import com.remoteclassroom.backend.repository.UserRepository;
 import com.remoteclassroom.backend.repository.WeakTopicRepository;
 
 @Service
@@ -30,126 +33,78 @@ public class QuizAttemptService {
     @Autowired
     private WeakTopicRepository weakTopicRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
-    // =========================
-    // 🚀 SUBMIT QUIZ
-    // =========================
     @Transactional
-    public QuizAttemptResponse submitQuiz(Long userId, QuizAttemptRequest request) {
+    public QuizAttemptResponse submitQuiz(String email, QuizAttemptRequest request) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         Quiz quiz = quizRepository.findById(request.getQuizId())
                 .orElseThrow(() -> new RuntimeException("Quiz not found"));
 
-        int score = evaluateScore(
-                quiz.getQuestionsJson(),
-                request.getAnswersJson(),
-                userId
-        );
+        List<Map<String, Object>> questions = parseQuestions(quiz.getQuestionsJson());
 
-        try {
-            QuizAttempt attempt = new QuizAttempt();
-            attempt.setUserId(userId);
-            attempt.setQuizId(request.getQuizId());
+        int score = 0;
+        List<String> weakTopicsList = new ArrayList<>();
 
-            String answersString = mapper.writeValueAsString(request.getAnswersJson());
-            attempt.setAnswersJson(answersString);
+        for (int i = 0; i < questions.size(); i++) {
 
-            attempt.setScore(score);
-            attempt.setAttemptedAt(LocalDateTime.now());
+            Map<String, Object> q = questions.get(i);
 
-            attemptRepository.save(attempt);
+            String correct = String.valueOf(q.get("correctAnswer"));
+            String topic = String.valueOf(q.get("topic"));
 
-        } catch (Exception e) {
-            throw new RuntimeException("Error saving attempt", e);
-        }
+            String selected = request.getAnswers().get(i);
 
-        QuizAttemptResponse response = new QuizAttemptResponse();
-        response.setScore(score);
-        response.setMessage("Quiz submitted successfully");
-
-        return response;
-    }
-
-
-    private int evaluateScore(String questionsJson, List<Map<String, Object>> answers, Long userId) {
-
-        try {
-            List<Map<String, Object>> questions =
-                    mapper.readValue(questionsJson, List.class);
-
-            int score = 0;
-
-            for (int i = 0; i < answers.size(); i++) {
-
-                if (i >= questions.size()) break;
-
-                String correct = String.valueOf(questions.get(i).get("correctAnswer"));
-                String selected = String.valueOf(answers.get(i).get("selectedAnswer"));
-
-                String topic = String.valueOf(questions.get(i).get("topic"));
-
-                if (correct.equals(selected)) {
-                    score++;
-                } else {
-                    saveWeakTopic(userId, topic);
-                }
+            if (selected != null && correct.equals(selected)) {
+                score++;
+            } else {
+                weakTopicsList.add(topic);
             }
-
-            return (score * 100) / questions.size();
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error evaluating quiz", e);
         }
-    }
 
-   
-    @Transactional
-   private void saveWeakTopic(Long userId, String topic) {
+        weakTopicsList = weakTopicsList.stream().distinct().toList();
 
-    if (topic == null) return;
+        QuizAttempt attempt = new QuizAttempt();
+        attempt.setStudent(user);
+        attempt.setQuiz(quiz);
+        attempt.setAnswersJson(toJson(request.getAnswers()));
+        attempt.setScore(score);
 
-    topic = topic.trim();
+        QuizAttempt savedAttempt = attemptRepository.save(attempt);
 
-    List<WeakTopic> topics = weakTopicRepository.findAll();
+        for (String topic : weakTopicsList) {
+            if (topic == null || topic.isBlank()) continue;
 
-    for (WeakTopic wt : topics) {
-        if (wt.getUserId().equals(userId) &&
-            wt.getTopic().trim().equalsIgnoreCase(topic)) {
+            WeakTopic wt = new WeakTopic();
+            wt.setQuizAttempt(savedAttempt);
+            wt.setTopic(topic.trim());
+            wt.setCount(1);
 
-            wt.setCount(wt.getCount() + 1);
             weakTopicRepository.save(wt);
-            return;
+        }
+
+        return new QuizAttemptResponse(score, questions.size(), weakTopicsList);
+    }
+
+    private List<Map<String, Object>> parseQuestions(String json) {
+        try {
+            return mapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            throw new RuntimeException("Error parsing questions JSON", e);
         }
     }
 
-    WeakTopic weak = new WeakTopic();
-    weak.setUserId(userId);
-    weak.setTopic(topic);
-    weak.setCount(1);
-
-    weakTopicRepository.save(weak);
-}
-
-    
-    public String getUserDifficultyAdvanced(Long userId) {
-
-        List<QuizAttempt> attempts = attemptRepository.findByUserId(userId);
-
-        if (attempts.isEmpty()) return "EASY";
-
-        List<QuizAttempt> recent = attempts.stream()
-                .sorted((a, b) -> b.getAttemptedAt().compareTo(a.getAttemptedAt()))
-                .limit(5)
-                .toList();
-
-        double avg = recent.stream()
-                .mapToInt(QuizAttempt::getScore)
-                .average()
-                .orElse(0);
-
-        if (avg >= 75) return "HARD";
-        else if (avg >= 40) return "MEDIUM";
-        else return "EASY";
+    private String toJson(Object obj) {
+        try {
+            return mapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            throw new RuntimeException("JSON conversion error", e);
+        }
     }
 }

@@ -1,11 +1,16 @@
 package com.remoteclassroom.backend.model;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -18,39 +23,35 @@ public class LiveClass {
 
     private String title;
 
-    private String teacher;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id")
+    private User teacher;
 
     private boolean isLive;
-
     private LocalDateTime startTime;
-
     private String meetingId;
 
-    public LiveClass() {}
+    @OneToMany(mappedBy = "liveClass")
+    private List<ClassParticipant> participants;
 
-    // Getters
+    // ✅ GETTERS & SETTERS
+
     public Long getId() { return id; }
 
     public String getTitle() { return title; }
-
-    public String getTeacher() { return teacher; }
-
-    public boolean isLive() { return isLive; }
-
-    public LocalDateTime getStartTime() { return startTime; }
-
-    public String getMeetingId() { return meetingId; }
-
-    
-    public void setId(Long id) { this.id = id; }
-
     public void setTitle(String title) { this.title = title; }
 
-    public void setTeacher(String teacher) { this.teacher = teacher; }
+    public User getTeacher() { return teacher; }
+    public void setTeacher(User teacher) { this.teacher = teacher; }
 
+    public boolean isLive() { return isLive; }
     public void setLive(boolean live) { isLive = live; }
 
+    public LocalDateTime getStartTime() { return startTime; }
     public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
 
+    public String getMeetingId() { return meetingId; }
     public void setMeetingId(String meetingId) { this.meetingId = meetingId; }
+
+    public List<ClassParticipant> getParticipants() { return participants; }
 }

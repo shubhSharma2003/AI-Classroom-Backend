@@ -1,7 +1,20 @@
 package com.remoteclassroom.backend.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "videos")
@@ -12,61 +25,38 @@ public class Video {
     private Long id;
 
     private String title;
-
     private String url;
 
-    private String uploadedBy;
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id")
+    private User teacher;
 
     private LocalDateTime uploadedAt;
 
-    // 🔹 Constructors
-    public Video() {}
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String transcript;
 
-    public Video(String title, String url, String uploadedBy) {
-        this.title = title;
-        this.url = url;
-        this.uploadedBy = uploadedBy;
+    @PrePersist
+    public void onCreate() {
         this.uploadedAt = LocalDateTime.now();
     }
 
-    // 🔹 Getters & Setters
-    public Long getId() {
-        return id;
-    }
+    // GETTERS
+    public Long getId() { return id; }
+    public String getTitle() { return title; }
+    public String getUrl() { return url; }
+    public LocalDateTime getUploadedAt() { return uploadedAt; }
+    public String getTranscript() { return transcript; }
 
-    public String getTitle() {
-        return title;
-    }
+    // ✅ THIS WAS MISSING
+    public User getTeacher() { return teacher; }
 
-    public String getUrl() {
-        return url;
-    }
-
-    public String getUploadedBy() {
-        return uploadedBy;
-    }
-
-    public LocalDateTime getUploadedAt() {
-        return uploadedAt;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public void setUploadedBy(String uploadedBy) {
-        this.uploadedBy = uploadedBy;
-    }
-
-    public void setUploadedAt(LocalDateTime uploadedAt) {
-        this.uploadedAt = uploadedAt;
-    }
+    // SETTERS
+    public void setTitle(String title) { this.title = title; }
+    public void setUrl(String url) { this.url = url; }
+    public void setTeacher(User teacher) { this.teacher = teacher; }
+    public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
+    public void setTranscript(String transcript) { this.transcript = transcript; }
 }

@@ -1,11 +1,6 @@
 package com.remoteclassroom.backend.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "weak_topic")
@@ -15,20 +10,23 @@ public class WeakTopic {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id")   
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "quiz_attempt_id")
+    private QuizAttempt quizAttempt;
 
     private String topic;
-
     private int count;
 
-    public Long getId() { return id; }
-    public Long getUserId() { return userId; }
-    public String getTopic() { return topic; }
-    public int getCount() { return count; }
+    // ✅ GETTERS & SETTERS
 
-    public void setId(Long id) { this.id = id; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public Long getId() { return id; }
+
+    public QuizAttempt getQuizAttempt() { return quizAttempt; }
+    public void setQuizAttempt(QuizAttempt quizAttempt) { this.quizAttempt = quizAttempt; }
+
+    public String getTopic() { return topic; }
     public void setTopic(String topic) { this.topic = topic; }
+
+    public int getCount() { return count; }
     public void setCount(int count) { this.count = count; }
 }

@@ -1,26 +1,27 @@
 package com.remoteclassroom.backend.dto;
 
-import java.util.List;
 import java.util.Map;
 
 public class QuizAttemptRequest {
 
     private Long quizId;
-    private List<Map<String, Object>> answersJson;
+
+    // index → answer (0,1,2...)
+    private Map<Integer, String> answers;
 
     public Long getQuizId() {
         return quizId;
-    }
-
-    public List<Map<String, Object>> getAnswersJson() {
-        return answersJson;
     }
 
     public void setQuizId(Long quizId) {
         this.quizId = quizId;
     }
 
-    public void setAnswersJson(List<Map<String, Object>> answersJson) {
-        this.answersJson = answersJson;
+    public Map<Integer, String> getAnswers() {
+        return answers;
+    }
+
+    public void setAnswers(Map<Integer, String> answers) {
+        this.answers = answers;
     }
 }

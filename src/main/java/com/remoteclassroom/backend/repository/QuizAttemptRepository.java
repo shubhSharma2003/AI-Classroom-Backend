@@ -3,14 +3,17 @@ package com.remoteclassroom.backend.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import com.remoteclassroom.backend.model.QuizAttempt;
 
-@Repository
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> {
 
-    List<QuizAttempt> findByUserId(Long userId);
+    // ✅ FIX 1: user → student
+    List<QuizAttempt> findByStudent_Id(Long userId);
 
-    List<QuizAttempt> findByUserIdAndQuizId(Long userId, Long quizId);
+    // ✅ FIX 2: user + quizId → student + quiz.id
+    List<QuizAttempt> findByStudent_IdAndQuiz_Id(Long userId, Long quizId);
+
+    // ✅ FIX 3: videoId → quiz.video.id
+    List<QuizAttempt> findByQuiz_Video_Id(Long videoId);
 }

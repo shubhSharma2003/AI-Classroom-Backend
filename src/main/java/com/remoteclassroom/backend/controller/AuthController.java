@@ -1,41 +1,47 @@
 package com.remoteclassroom.backend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.remoteclassroom.backend.config.JwtUtil;
+import com.remoteclassroom.backend.service.AuthService;
+import com.remoteclassroom.backend.dto.RegisterRequest;
+import com.remoteclassroom.backend.dto.LoginRequest;
 import com.remoteclassroom.backend.model.User;
-import com.remoteclassroom.backend.repository.UserRepository;
 
 import jakarta.validation.Valid;
+
+import java.util.Map; 
+
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     @Autowired
-    private UserRepository userRepository;
+    private AuthService authService;
 
     @PostMapping("/register")
-    public String register(@Valid @RequestBody User user) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
 
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            return "Email already exists";
-        }
+        User user = authService.register(request);
 
-        userRepository.save(user);
-        return "User registered successfully";
+        return ResponseEntity.ok(
+            Map.of(
+                "success", true,
+                "data", Map.of(
+                    "name", user.getName(),
+                    "email", user.getEmail(),
+                    "role", user.getRole()
+                ),
+                "message", "User registered successfully"
+            )
+        );
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody User user) {
-
-        User dbUser = userRepository.findByEmail(user.getEmail()).orElse(null);
-
-        if (dbUser == null || !dbUser.getPassword().equals(user.getPassword())) {
-            return "Invalid credentials";
-        }
-
-        return JwtUtil.generateToken(user.getEmail());
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 }

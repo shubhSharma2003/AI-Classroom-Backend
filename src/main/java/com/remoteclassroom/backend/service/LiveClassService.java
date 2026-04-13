@@ -9,8 +9,10 @@ import org.springframework.stereotype.Service;
 
 import com.remoteclassroom.backend.model.ClassParticipant;
 import com.remoteclassroom.backend.model.LiveClass;
+import com.remoteclassroom.backend.model.User;
 import com.remoteclassroom.backend.repository.ClassParticipantRepository;
 import com.remoteclassroom.backend.repository.LiveClassRepository;
+import com.remoteclassroom.backend.repository.UserRepository;
 
 @Service
 public class LiveClassService {
@@ -21,20 +23,25 @@ public class LiveClassService {
     @Autowired
     private ClassParticipantRepository participantRepository;
 
-    // ✅ Create class (UPDATED with meetingId)
-    public LiveClass createClass(String title, String teacher) {
+    @Autowired
+    private UserRepository userRepository;
+
+    // ================= CREATE =================
+    public LiveClass createClass(String title, String teacherEmail) {
+
+        User teacher = userRepository.findByEmail(teacherEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         LiveClass lc = new LiveClass();
         lc.setTitle(title);
-        lc.setTeacher(teacher);
+        lc.setTeacher(teacher); // ✅ FIX
         lc.setLive(false);
-
-        // 🔥 Generate meetingId for streaming
         lc.setMeetingId(UUID.randomUUID().toString());
 
         return liveClassRepository.save(lc);
     }
 
-    // ✅ Start class
+    // ================= START =================
     public LiveClass startClass(Long classId) {
         LiveClass lc = liveClassRepository.findById(classId)
                 .orElseThrow(() -> new RuntimeException("Class not found"));
@@ -45,48 +52,77 @@ public class LiveClassService {
         return liveClassRepository.save(lc);
     }
 
-    // ✅ Join class
-    public ClassParticipant joinClass(Long classId, String student) {
+    // ================= JOIN =================
+    public ClassParticipant joinClass(Long classId, String studentEmail) {
 
-        // 1. Check class exists
         LiveClass lc = liveClassRepository.findById(classId)
                 .orElseThrow(() -> new RuntimeException("Class not found"));
 
-        // 2. Check if class is live
         if (!lc.isLive()) {
             throw new RuntimeException("Class is not live");
         }
 
-        // 3. Prevent duplicate join
-        boolean alreadyJoined = participantRepository
-                .existsByClassIdAndStudent(classId, student);
+        User student = userRepository.findByEmail(studentEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean alreadyJoined =
+                participantRepository.existsByLiveClassIdAndStudentEmail(classId, studentEmail);
 
         if (alreadyJoined) {
-            throw new RuntimeException("Student already joined this class");
+            throw new RuntimeException("Already joined");
         }
 
-        // 4. Save participant
         ClassParticipant cp = new ClassParticipant();
-        cp.setClassId(classId);
-        cp.setStudent(student);
+        cp.setLiveClass(lc);       // ✅ FIX
+        cp.setStudent(student);    // ✅ FIX
         cp.setJoinedAt(LocalDateTime.now());
 
         return participantRepository.save(cp);
     }
 
-    // ✅ Get live classes
-    public List<LiveClass> getLiveClasses() {
-        return liveClassRepository.findByIsLiveTrue();
+    // ================= LEAVE =================
+    public ClassParticipant leaveClass(Long classId, String studentEmail) {
+
+        ClassParticipant cp = participantRepository
+                .findByLiveClassIdAndStudentEmail(classId, studentEmail)
+                .orElseThrow(() -> new RuntimeException("Not joined"));
+
+        if (cp.getLeftAt() != null) {
+            throw new RuntimeException("Already left");
+        }
+
+        cp.setLeftAt(LocalDateTime.now());
+        cp.calculateDuration();
+
+        return participantRepository.save(cp);
     }
 
-    // 🔥 NEW METHOD (ADD THIS)
+    // ================= GET CLASS =================
     public LiveClass getClassById(Long id) {
         return liveClassRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Class not found"));
     }
 
-    // ✅ Attendance count
+    // ================= LIVE CLASSES =================
+    public List<LiveClass> getLiveClasses() {
+        return liveClassRepository.findByIsLiveTrue();
+    }
+
+    // ================= TOTAL JOINED =================
     public long getAttendanceCount(Long classId) {
-        return participantRepository.countByClassId(classId);
+        return participantRepository.countByLiveClassId(classId);
+    }
+
+    // ================= REAL PRESENT =================
+    public long getPresentCount(Long classId) {
+        return participantRepository.findByLiveClassId(classId)
+                .stream()
+                .filter(p -> p.getDurationSeconds() != null && p.getDurationSeconds() > 60)
+                .count();
+    }
+
+    // ================= CHECK JOIN =================
+    public boolean isUserJoined(Long classId, String email) {
+        return participantRepository.existsByLiveClassIdAndStudentEmail(classId, email);
     }
 }

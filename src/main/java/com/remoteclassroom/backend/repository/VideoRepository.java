@@ -1,11 +1,14 @@
 package com.remoteclassroom.backend.repository;
 
-import com.remoteclassroom.backend.model.Video;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
+import com.remoteclassroom.backend.model.Video;
 
 public interface VideoRepository extends JpaRepository<Video, Long> {
 
-    List<Video> findByUploadedBy(String uploadedBy);
+    // ✅ Get videos uploaded by teacher
+    List<Video> findByTeacher_Email(String email);
+
 }

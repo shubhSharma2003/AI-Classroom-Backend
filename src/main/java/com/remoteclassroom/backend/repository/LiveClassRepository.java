@@ -1,9 +1,10 @@
 package com.remoteclassroom.backend.repository;
 
-import com.remoteclassroom.backend.model.LiveClass;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
+import com.remoteclassroom.backend.model.LiveClass;
 
 public interface LiveClassRepository extends JpaRepository<LiveClass, Long> {
 
