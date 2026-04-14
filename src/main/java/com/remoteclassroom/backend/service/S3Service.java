@@ -13,12 +13,17 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 @Service
 public class S3Service {
 
     @Autowired
     private S3Client s3Client;
+
+    @Autowired
+    private S3Presigner s3Presigner;
 
     private final String bucketName = "remote-classroom-videos-02";
 
@@ -44,8 +49,6 @@ public class S3Service {
     // ================= PRESIGNED UPLOAD =================
     public String generatePresignedUrl(String fileName) {
 
-        S3Presigner presigner = S3Presigner.create();
-
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(fileName)
@@ -57,7 +60,7 @@ public class S3Service {
                         .putObjectRequest(objectRequest)
                         .build();
 
-        return presigner.presignPutObject(presignRequest)
+        return s3Presigner.presignPutObject(presignRequest)
                 .url()
                 .toString();
     }
@@ -67,12 +70,27 @@ public class S3Service {
         return "https://" + bucketName + ".s3.ap-south-1.amazonaws.com/" + fileName;
     }
 
-    // ================= DOWNLOAD (NEW) =================
-    public String generateDownloadUrl(String fileUrl) {
+    // ================= DOWNLOAD (NEW & SECURE) =================
+    public String generateDownloadUrl(String fileUrl, String title) {
 
         // extract file name from URL
         String key = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+        
+        // Force browser to download instead of playing inline
+        String sanitizedTitle = title.replaceAll("[^a-zA-Z0-9.-]", "_");
+        String contentDisposition = "attachment; filename=\"" + sanitizedTitle + ".mp4\"";
 
-        return "https://" + bucketName + ".s3.ap-south-1.amazonaws.com/" + key;
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .responseContentDisposition(contentDisposition)
+                .build();
+
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(15)) // URL expires in 15 mins for security
+                .getObjectRequest(getObjectRequest)
+                .build();
+
+        return s3Presigner.presignGetObject(presignRequest).url().toString();
     }
 }

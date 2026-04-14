@@ -25,26 +25,33 @@ public class AIService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     // =========================
-    // 📘 EXPLANATION API
+    // 📘 EXPLANATION API (DOUBTS)
     // =========================
     public String getAnswer(String question, String language) {
 
         String prompt = """
-You are an expert teacher.
+You are an expert, encouraging AI teacher.
 
-Explain the following question in simple %s.
+A student has asked the following doubt. Please explain it clearly in %s.
 
-Rules:
-- Use easy words
-- Give short explanation
-- Add example if possible
-- Keep it student-friendly
+Guidelines for your response:
+1. Structure: Use markdown format. Use bolding to highlight keywords. Draw clear bullet points to make it extremely readable.
+2. Clarity: Avoid overly complex jargon. Keep sentences concise.
+3. Examples: Always provide exactly one simple real-world or code example to solidify the concept.
+4. Tone: Be friendly, professional, and directly address the student.
 
-Question:
+Question from Student:
 %s
 """.formatted(language, question);
 
-        return callGemini(prompt);
+        try {
+            // Because this is natural text, we do NOT run cleanJson! 
+            // We want to preserve \n so paragraphs render correctly on the UI.
+            return callGeminiCore(prompt);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "I'm sorry, I am experiencing a temporary technical glitch connecting to the central mainframe. Please try asking your doubt again in a moment!";
+        }
     }
 
     // =========================
@@ -52,7 +59,7 @@ Question:
     // =========================
     public String generateQuiz(String transcript, String difficulty, String weakTopic) {
 
-    String prompt = """
+        String prompt = """
 You are an expert teacher.
 
 Generate EXACTLY 10 MCQs in English.
@@ -79,61 +86,61 @@ Return ONLY JSON.
 Lecture:
 %s
 """.formatted(
-            difficulty,
-            (weakTopic != null && !weakTopic.isBlank()
-                    ? "Focus MORE on weak topic: " + weakTopic
-                    : ""),
-            transcript
-    );
-
-    return callGemini(prompt);
-}
-
-    // =========================
-    // 🔥 GEMINI CALL (SAFE)
-    // =========================
-    private String callGemini(String prompt) {
+                difficulty,
+                (weakTopic != null && !weakTopic.isBlank()
+                        ? "Focus MORE on weak topic: " + weakTopic
+                        : ""),
+                transcript
+        );
 
         try {
-            Map<String, Object> part = new HashMap<>();
-            part.put("text", prompt);
-
-            Map<String, Object> content = new HashMap<>();
-            content.put("parts", List.of(part));
-
-            Map<String, Object> request = new HashMap<>();
-            request.put("contents", List.of(content));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Map<String, Object>> entity =
-                    new HttpEntity<>(request, headers);
-
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    GEMINI_URL + apiKey,
-                    HttpMethod.POST,
-                    entity,
-                    Map.class
-            );
-
-            return cleanJson(extractText(response));
-
+            // We run cleanJson here specifically to protect the JSON parser 
+            // without destroying the Doubt API logic above.
+            String rawResponse = callGeminiCore(prompt);
+            return cleanJson(rawResponse);
         } catch (Exception e) {
             e.printStackTrace();
-
-            // fallback (safe JSON)
             return """
 [
   {
-    "question": "What is Java?",
-    "options": ["Language", "Database", "OS", "Browser"],
-    "correctAnswer": "Language",
-    "topic": "Basics"
+    "question": "An error occurred generating an adaptive quiz. This is a fallback dummy question.",
+    "options": ["A", "B", "C", "D"],
+    "correctAnswer": "A",
+    "topic": "Fallback"
   }
 ]
 """;
         }
+    }
+
+    // =========================
+    // 🔥 CORE GEMINI API CALL
+    // =========================
+    private String callGeminiCore(String prompt) throws Exception {
+
+        Map<String, Object> part = new HashMap<>();
+        part.put("text", prompt);
+
+        Map<String, Object> content = new HashMap<>();
+        content.put("parts", List.of(part));
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("contents", List.of(content));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> entity =
+                new HttpEntity<>(request, headers);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                GEMINI_URL + apiKey,
+                HttpMethod.POST,
+                entity,
+                Map.class
+        );
+
+        return extractText(response);
     }
 
     // =========================
@@ -162,7 +169,7 @@ Lecture:
     }
 
     // =========================
-    // 🧹 CLEAN JSON (VERY IMPORTANT)
+    // 🧹 CLEAN JSON (ONLY FOR QUIZZES)
     // =========================
     private String cleanJson(String text) {
 

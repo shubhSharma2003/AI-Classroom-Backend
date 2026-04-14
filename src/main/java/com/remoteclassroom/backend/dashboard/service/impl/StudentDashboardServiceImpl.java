@@ -14,6 +14,9 @@ import com.remoteclassroom.backend.dashboard.repository.DashboardParticipantRepo
 import com.remoteclassroom.backend.dashboard.repository.DashboardQuizRepository;
 import com.remoteclassroom.backend.dashboard.repository.DashboardWeakTopicRepository;
 import com.remoteclassroom.backend.dashboard.service.StudentDashboardService;
+import com.remoteclassroom.backend.service.RecommendationService;
+import com.remoteclassroom.backend.repository.UserRepository;
+import com.remoteclassroom.backend.model.User;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +27,8 @@ public class StudentDashboardServiceImpl implements StudentDashboardService {
     private final DashboardQuizRepository quizRepository;
     private final DashboardParticipantRepository attendanceRepository;
     private final DashboardWeakTopicRepository weakTopicRepository;
+    private final RecommendationService recommendationService;
+    private final UserRepository userRepository;
 
     @Override
     public StudentDashboardResponse getDashboard(String userEmail) {
@@ -89,12 +94,17 @@ public class StudentDashboardServiceImpl implements StudentDashboardService {
         List<RecentClassResponse> recentClasses =
                 attendanceRepository.getRecentClasses(userEmail, PageRequest.of(0, 5));
 
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         return StudentDashboardResponse.builder()
                 .performance(performance)
                 .weakTopics(weakTopics)
                 .attendance(attendance)
                 .recentQuizzes(recentQuizzes)
                 .recentClasses(recentClasses)
+                .overallTrend(recommendationService.getOverallTrend(user.getId()))
+                .recommendedActions(recommendationService.getRecommendations(user.getId()))
                 .build();
     }
 }

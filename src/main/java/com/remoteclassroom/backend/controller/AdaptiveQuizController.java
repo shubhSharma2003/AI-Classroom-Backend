@@ -10,11 +10,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import com.remoteclassroom.backend.model.Quiz;
 import com.remoteclassroom.backend.model.User;
+import com.remoteclassroom.backend.model.Video;
 import com.remoteclassroom.backend.repository.UserRepository;
+import com.remoteclassroom.backend.repository.VideoRepository;
 import com.remoteclassroom.backend.service.AdaptiveQuizService;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("/api/adaptive")
@@ -26,11 +31,14 @@ public class AdaptiveQuizController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private VideoRepository videoRepository;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
-    @PostMapping("/quiz")
+    @PostMapping("/quiz/{videoId}")
     public ResponseEntity<?> generateQuiz(
-            @RequestBody String transcript,
+            @PathVariable Long videoId,
             Authentication authentication) {
 
         try {
@@ -40,12 +48,18 @@ public class AdaptiveQuizController {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            Quiz quiz = adaptiveService.generateAdaptiveQuiz(user.getId(), transcript);
+            Video video = videoRepository.findById(videoId)
+                    .orElseThrow(() -> new RuntimeException("Video not found"));
 
-            Object questions = mapper.readValue(
+            Quiz quiz = adaptiveService.generateAdaptiveQuiz(user.getId(), video);
+
+            List<Map<String, Object>> questions = mapper.readValue(
                     quiz.getQuestionsJson(),
-                    Object.class
+                    new TypeReference<List<Map<String, Object>>>() {}
             );
+
+            // SECURE: Strip the correct answers so students can't cheat via DevTools
+            questions.forEach(q -> q.remove("correctAnswer"));
 
             return ResponseEntity.ok(
                     Map.of(

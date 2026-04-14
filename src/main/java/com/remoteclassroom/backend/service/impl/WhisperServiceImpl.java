@@ -12,6 +12,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.remoteclassroom.backend.service.WhisperService;
 
 @Service
@@ -41,6 +43,14 @@ public class WhisperServiceImpl implements WhisperService {
         ResponseEntity<String> response =
                 restTemplate.postForEntity(URL, request, String.class);
 
-        return response.getBody();
+        // Whisper returns JSON like: {"text": "...transcript..."}
+        // We must extract just the text field, not the raw JSON wrapper
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response.getBody());
+            return root.path("text").asText();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse Whisper response: " + response.getBody(), e);
+        }
     }
 }

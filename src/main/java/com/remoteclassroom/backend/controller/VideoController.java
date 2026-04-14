@@ -102,7 +102,7 @@ public class VideoController {
 
         Video video = videoService.getById(videoId);
 
-        String downloadUrl = s3Service.generateDownloadUrl(video.getUrl());
+        String downloadUrl = s3Service.generateDownloadUrl(video.getUrl(), video.getTitle());
 
         return ResponseEntity.ok(Map.of(
                 "downloadUrl", downloadUrl,

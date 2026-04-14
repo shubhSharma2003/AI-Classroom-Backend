@@ -17,4 +17,6 @@ public class StudentDashboardResponse {
     private AttendanceResponse attendance;
     private List<RecentQuizResponse> recentQuizzes;
     private List<RecentClassResponse> recentClasses;
+    private List<ProgressTrendResponse> overallTrend;
+    private List<RecommendationResponse> recommendedActions;
 }
