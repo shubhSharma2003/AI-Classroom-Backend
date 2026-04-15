@@ -27,17 +27,17 @@ public class AuthController {
 
         User user = authService.register(request);
 
-        return ResponseEntity.ok(
-            Map.of(
-                "success", true,
-                "data", Map.of(
-                    "name", user.getName(),
-                    "email", user.getEmail(),
-                    "role", user.getRole()
-                ),
-                "message", "User registered successfully"
-            )
-        );
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("name", user.getName());
+        data.put("email", user.getEmail());
+        data.put("role", user.getRole());
+
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("success", true);
+        response.put("data", data);
+        response.put("message", "User registered successfully");
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")

@@ -34,20 +34,22 @@ public class AuthService {
     }
 
     // LOGIN
-    public Map<String, String> login(LoginRequest request) {
+    public Map<String, Object> login(LoginRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (user.getPassword() == null || request.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid password");
         }
 
-        String token = JwtUtil.generateToken(user.getEmail(), user.getRole());
+        String role = user.getRole() != null ? user.getRole() : "ROLE_STUDENT";
 
-        return Map.of(
-                "token", token,
-                "role", user.getRole()
-        );
+        String token = JwtUtil.generateToken(user.getEmail(), role);
+
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("token", token);
+        response.put("role", role);
+        return response;
     }
 }

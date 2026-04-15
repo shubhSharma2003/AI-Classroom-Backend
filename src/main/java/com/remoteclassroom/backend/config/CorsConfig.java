@@ -15,17 +15,19 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allow all origins so your frontend teammate can reach the API.
-        // Tighten this to specific origins once you know the final frontend URL,
+        // Allow all origins so your frontend teammate (and any future
+        // deployment URL) can reach the API without CORS errors.
+        // Tighten this to specific origins once you know the final URL,
         // e.g. List.of("https://your-frontend.vercel.app")
         config.setAllowedOriginPatterns(List.of("*"));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
+        // Expose standard + auth headers
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization", "Content-Type"));
 
-        // Required when credentials (Authorization header / cookies) are sent
+        // Required when credentials (cookies / Authorization header) are sent
         config.setAllowCredentials(true);
 
         // Cache preflight for 1 hour
