@@ -31,9 +31,11 @@ public class JwtFilter extends OncePerRequestFilter {
 
         System.out.println("➡️ HEADER: " + header);
 
-        // ❌ No token → skip
+        // ❌ No token → skip (don't log "No Bearer token" for auth/public routes to keep logs clean)
         if (header == null || !header.startsWith("Bearer ")) {
-            System.out.println("❌ No Bearer token");
+            if (!request.getRequestURI().contains("/api/auth/")) {
+                System.out.println("ℹ️ Skipping auth for: " + request.getRequestURI());
+            }
             filterChain.doFilter(request, response);
             return;
         }
@@ -49,9 +51,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // ✅ IMPORTANT: ROLE must match Spring format
-                SimpleGrantedAuthority authority =
-                        new SimpleGrantedAuthority(role);
+                // ✅ Spring Security requires ROLE_ prefix for hasRole()
+                String springRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(springRole);
 
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(

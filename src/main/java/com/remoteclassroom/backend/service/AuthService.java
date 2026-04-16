@@ -26,9 +26,9 @@ public class AuthService {
 
         User user = new User();
         user.setName(request.getName());
-        user.setEmail(request.getEmail());
+        user.setEmail(request.getEmail().toLowerCase().trim());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole().toUpperCase()); // 🔥 IMPORTANT
+        user.setRole(request.getRole().toUpperCase()); // Store plain (STUDENT/TEACHER)
 
         return userRepository.save(user);
     }
@@ -36,14 +36,14 @@ public class AuthService {
     // LOGIN
     public Map<String, Object> login(LoginRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getPassword() == null || request.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid password");
         }
 
-        String role = user.getRole() != null ? user.getRole() : "ROLE_STUDENT";
+        String role = user.getRole() != null ? user.getRole() : "STUDENT";
 
         String token = JwtUtil.generateToken(user.getEmail(), role);
 

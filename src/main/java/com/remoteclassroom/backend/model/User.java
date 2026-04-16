@@ -65,7 +65,7 @@ public class User {
         this.name = name;
         this.email = email;
         this.password = password;
-        this.role = "ROLE_" + role.toUpperCase();
+        this.role = role.toUpperCase();
     }
 
     // ❌ ID hide karne ki जरूरत नहीं — useful hota hai
@@ -85,7 +85,7 @@ public class User {
     public String getRole() { return role; }
 
     public void setRole(String role) {
-        this.role = "ROLE_" + role.toUpperCase();
+        this.role = role.toUpperCase();
     }
 
     // relations getters/setters (optional use only)
