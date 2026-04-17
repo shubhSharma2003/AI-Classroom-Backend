@@ -36,6 +36,7 @@ public class VideoController {
     public ResponseEntity<?> uploadVideo(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
+            @RequestParam(value = "transcript", required = false) String transcript,
             Authentication authentication
     ) {
         try {
@@ -46,7 +47,7 @@ public class VideoController {
                     title,
                     fileUrl,
                     username,
-                    null
+                    transcript
             );
 
             return ResponseEntity.ok(savedVideo);

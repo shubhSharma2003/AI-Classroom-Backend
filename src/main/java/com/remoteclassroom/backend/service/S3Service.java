@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,7 +26,8 @@ public class S3Service {
     @Autowired
     private S3Presigner s3Presigner;
 
-    private final String bucketName = "remote-classroom-videos-02";
+    @Value("${aws.bucketName}")
+    private String bucketName;
 
     // ================= UPLOAD =================
     public String uploadFile(MultipartFile file) throws IOException {
@@ -40,7 +42,7 @@ public class S3Service {
 
         s3Client.putObject(
                 putObjectRequest,
-                RequestBody.fromBytes(file.getBytes())
+                RequestBody.fromInputStream(file.getInputStream(), file.getSize())
         );
 
         return getFileUrl(fileName);
